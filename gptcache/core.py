@@ -112,11 +112,11 @@ class Cache:
             self.next_cache.data_manager.flush()
 
     @staticmethod
-    def set_openai_key():
+    def set_openai_key(OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY")):
         import_openai()
         import openai  # pylint: disable=C0415
 
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        openai.api_key = OPENAI_API_KEY
 
 
 cache = Cache()
