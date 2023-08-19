@@ -13,19 +13,23 @@ from redis_om import get_redis_connection
 
 class TestRedisStorage(unittest.TestCase):
     test_dbname = "gptcache_test"
+    url = "redis://default:default@localhost:6379"
+
+    # url = "redis://default:default@localhost:7000"
 
     def setUp(cls) -> None:
         cls._clear_test_db()
 
     @staticmethod
     def _clear_test_db():
-        r = get_redis_connection()
+        r = get_redis_connection(url=TestRedisStorage.url)
         r.flushall()
         r.flushdb()
         time.sleep(1)
 
     def test_normal(self):
-        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname)
+        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname,
+                                          url=self.url)
         data = []
         for i in range(1, 10):
             data.append(
@@ -61,7 +65,10 @@ class TestRedisStorage(unittest.TestCase):
         assert redis_storage.count(is_all=True) == 7
 
     def test_with_deps(self):
-        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname)
+        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname,
+                                          url=self.url,
+                                          # cluster=True
+                                          )
         data_id = redis_storage.batch_insert(
             [
                 CacheData(
@@ -98,7 +105,8 @@ class TestRedisStorage(unittest.TestCase):
         assert ret.question.deps[1].dep_type == 1
 
     def test_create_on(self):
-        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname)
+        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname,
+                                          url=self.url)
         redis_storage.create()
         data = []
         for i in range(1, 10):
@@ -124,7 +132,8 @@ class TestRedisStorage(unittest.TestCase):
         assert last_access1 < last_access2
 
     def test_session(self):
-        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname)
+        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname,
+                                          url=self.url)
         data = []
         for i in range(1, 11):
             data.append(
@@ -146,3 +155,30 @@ class TestRedisStorage(unittest.TestCase):
 
         redis_storage.delete_session(ids[:3])
         assert len(redis_storage.list_sessions()) == 7
+
+    def test_cache_configuration(self):
+        redis_storage = RedisCacheStorage(global_key_prefix=self.test_dbname,
+                                          url=self.url,
+                                          maxmemory_samples=5,
+                                          maxmemory="4mb",
+                                          policy="allkeys-lru",
+                                          ttl=10)
+
+        memory_conf = redis_storage.con.config_get("maxmemory")
+        assert memory_conf is not None
+        assert memory_conf["maxmemory"] == "4194304"
+        policy_conf = redis_storage.con.config_get("maxmemory-policy")
+        assert policy_conf is not None
+        assert policy_conf['maxmemory-policy'] == "allkeys-lru"
+
+        samples_conf = redis_storage.con.config_get("maxmemory-samples")
+        assert samples_conf is not None
+        assert samples_conf['maxmemory-samples'] == "5"
+
+        ids = redis_storage.batch_insert(
+            [CacheData("question_1", ["answer_1"] * 2, np.random.rand(5), session_id=1)])
+        ttl = redis_storage.con.ttl(redis_storage._ques.make_key(ids[0]))
+        assert ttl is not None
+        time.sleep(2)
+        ttl = redis_storage.con.ttl(redis_storage._ques.make_key(ids[0]))
+        assert ttl < 10

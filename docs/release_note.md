@@ -5,7 +5,23 @@ To read the following content, you need to understand the basic use of GPTCache,
 - [Readme doc](https://github.com/zilliztech/GPTCache)
 - [Usage doc](https://github.com/zilliztech/GPTCache/blob/main/docs/usage.md)
 
-## v0.1.35 (2023.6.30)
+## v0.1.38 (2023.7.31)
+
+Some improvements:
+1. Handle openai change of api base for just embeddings
+2. Support for custom class schema in weaviate vector store
+3. Fix the error: 'SSDataManager' object has no attribute 'eviction_manager'
+
+## v0.1.37 (2023.7.23)
+
+1. Support the weaviate vector databse
+
+## v0.1.36 (2023.7.14)
+
+1. Fix the connection error of the remote redis cache store
+2. Add the openai proxy for the chat complete api
+
+## v0.1.35 (2023.7.7)
 
 1. Support the redis as the cache store, usage example: [redis+onnx](https://github.com/zilliztech/GPTCache/blob/main/tests/integration_tests/test_redis_onnx.py)
 2. Add report table for easy analysis of cache data
