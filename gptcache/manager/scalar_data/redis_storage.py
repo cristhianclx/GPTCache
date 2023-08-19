@@ -20,7 +20,7 @@ from redis_om import get_redis_connection
 from redis_om import JsonModel, EmbeddedJsonModel, NotFoundError, Field, Migrator
 
 
-def get_models(global_key, con):
+def get_models(global_key):
     class Counter:
         key_name = global_key + ":counter"
 
@@ -32,9 +32,6 @@ def get_models(global_key, con):
         def get(cls, con: Redis):
             return con.get(cls.key_name)
 
-        class Meta:
-            database = con
-            
     class Embedding:
         """
         Custom class for storing embedding result.
@@ -70,9 +67,6 @@ def get_models(global_key, con):
             result = db.hgetall(cls.prefix + ":" + str(key))
             return {k.decode("utf-8"): v for k, v in result.items()}
 
-        class Meta:
-            database = con
-
     class Answers(EmbeddedJsonModel):
         """
         answer collection
@@ -80,9 +74,6 @@ def get_models(global_key, con):
 
         answer: str
         answer_type: int
-
-        class Meta:
-            database = con
 
     class Questions(JsonModel):
         """
@@ -98,7 +89,6 @@ def get_models(global_key, con):
         class Meta:
             global_key_prefix = global_key
             model_key_prefix = "questions"
-            database = con
 
     class Sessions(JsonModel):
         """
@@ -108,7 +98,6 @@ def get_models(global_key, con):
         class Meta:
             global_key_prefix = global_key
             model_key_prefix = "sessions"
-            database = con
 
         session_id: str = Field(index=True)
         session_question: str
@@ -122,7 +111,6 @@ def get_models(global_key, con):
         class Meta:
             global_key_prefix = global_key
             model_key_prefix = "ques_deps"
-            database = con
 
         question_id: str = Field(index=True)
         dep_name: str
@@ -137,7 +125,6 @@ def get_models(global_key, con):
         class Meta:
             global_key_prefix = global_key
             model_key_prefix = "report"
-            database = con
 
         user_question: str
         cache_question_id: int = Field(index=True)
@@ -207,7 +194,7 @@ class RedisCacheStorage(CacheStorage):
             self._session,
             self._counter,
             self._report,
-        ) = get_models(global_key_prefix, self.con)
+        ) = get_models(global_key_prefix)
 
         Migrator().run()
 
